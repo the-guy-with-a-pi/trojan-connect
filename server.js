@@ -12,9 +12,7 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
-// ==========================================
-// 1. POSTGRESQL DATABASE SETUP (Password: 8760)
-// ==========================================
+// Database Connection (Password: 8760)
 const pool = new Pool({
   user: 'trojan',
   host: 'localhost',
@@ -25,40 +23,42 @@ const pool = new Pool({
 
 pool.connect((err, client, release) => {
   if (err) {
-    console.error('Error acquiring client from PostgreSQL pool:', err.stack);
+    console.error('Database connection error:', err.stack);
   } else {
-    console.log('Connected to PostgreSQL database successfully!');
+    console.log('Connected to PostgreSQL database!');
     
-    // Automatically create the messages table if it doesn't exist yet
+    // Create Users table and Messages table with DM support
     client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
       CREATE TABLE IF NOT EXISTS messages (
         id SERIAL PRIMARY KEY,
-        username TEXT NOT NULL,
+        sender TEXT NOT NULL,
+        recipient TEXT DEFAULT 'global',
         message TEXT,
         image_url TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
+      );
     `, (tableErr) => {
       release();
       if (tableErr) {
-        console.error('Error creating messages table:', tableErr);
+        console.error('Error creating schema:', tableErr);
       } else {
-        console.log('Messages database schema verified/created.');
+        console.log('Database tables verified/initialized.');
       }
     });
   }
 });
 
-// ==========================================
-// 2. MIDDLEWARE & STATIC FILES
-// ==========================================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ==========================================
-// 3. IMAGE UPLOADS & 2-HOUR AUTO-DELETION
-// ==========================================
+// Image Uploads & 2-Hour Auto-Deletion
 const uploadDir = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -72,89 +72,98 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// Upload Endpoint for Pictures
 app.post('/upload', upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
-  const fileUrl = `/uploads/${req.file.filename}`;
-  res.json({ url: fileUrl });
+  res.json({ url: `/uploads/${req.file.filename}` });
 });
 
-// Background Cleanup Job: Runs every 10 minutes, deletes files older than 2 hours
+// Cleanup job every 10 minutes for files older than 2 hours
 setInterval(() => {
   fs.readdir(uploadDir, (err, files) => {
     if (err) return;
     const twoHoursAgo = Date.now() - (2 * 60 * 60 * 1000);
-    
     files.forEach(file => {
       const filePath = path.join(uploadDir, file);
       fs.stat(filePath, (err, stats) => {
         if (!err && stats.mtimeMs < twoHoursAgo) {
-          fs.unlink(filePath, (err) => {
-            if (!err) console.log(`Auto-deleted expired image to save space: ${file}`);
-          });
+          fs.unlink(filePath, () => {});
         }
       });
     });
   });
-}, 10 * 60 * 1000); // 10 minutes interval
+}, 10 * 60 * 1000);
 
-// ==========================================
-// 4. SOCKET.IO, CHAT & WEBRTC SIGNALING
-// ==========================================
+// Socket.io Authentication & Real-time Chat
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // Send historical messages from PostgreSQL to newly connected users
-  pool.query('SELECT username, message, image_url, created_at FROM messages ORDER BY created_at ASC LIMIT 50', (err, result) => {
-    if (!err) {
-      socket.emit('load-history', result.rows);
+  // Handle User Registration
+  socket.on('register', async ({ username, password }) => {
+    try {
+      const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+      if (result.rows.length > 0) {
+        socket.emit('auth-error', 'Username already taken.');
+      } else {
+        await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, password]);
+        socket.emit('auth-success', { username });
+      }
+    } catch (e) {
+      socket.emit('auth-error', 'Server error during registration.');
     }
   });
 
-  // Handle standard chat messages & picture links
-  socket.on('chat-message', (data) => {
-    const { username, message, imageUrl } = data;
-    
-    // Save to PostgreSQL database
-    pool.query(
-      'INSERT INTO messages (username, message, image_url) VALUES ($1, $2, $3)',
-      [username, message || '', imageUrl || null],
-      (err) => {
-        if (err) console.error('Error saving message to database:', err);
+  // Handle User Login
+  socket.on('login', async ({ username, password }) => {
+    try {
+      const result = await pool.query('SELECT * FROM users WHERE username = $1 AND password = $2', [username, password]);
+      if (result.rows.length > 0) {
+        socket.emit('auth-success', { username });
+      } else {
+        socket.emit('auth-error', 'Invalid username or password.');
       }
+    } catch (e) {
+      socket.emit('auth-error', 'Server error during login.');
+    }
+  });
+
+  // Fetch online users list
+  socket.on('get-users', async () => {
+    try {
+      const result = await pool.query('SELECT username FROM users ORDER BY username ASC');
+      socket.emit('users-list', result.rows.map(r => r.username));
+    } catch (e) {}
+  });
+
+  // Load chat history (Global or Direct Messages)
+  socket.on('load-history', async ({ user, recipient }) => {
+    try {
+      let query, params;
+      if (recipient === 'global') {
+        query = 'SELECT sender, recipient, message, image_url, created_at FROM messages WHERE recipient = $1 ORDER BY created_at ASC LIMIT 50';
+        params = ['global'];
+      } else {
+        query = 'SELECT sender, recipient, message, image_url, created_at FROM messages WHERE (sender = $1 AND recipient = $2) OR (sender = $2 AND recipient = $1) ORDER BY created_at ASC LIMIT 50';
+        params = [user, recipient];
+      }
+      const result = await pool.query(query, params);
+      socket.emit('history-loaded', result.rows);
+    } catch (e) {}
+  });
+
+  // Handle Chat Messages & DMs
+  socket.on('chat-message', (data) => {
+    const { sender, recipient, message, imageUrl } = data;
+    
+    pool.query(
+      'INSERT INTO messages (sender, recipient, message, image_url) VALUES ($1, $2, $3, $4)',
+      [sender, recipient || 'global', message || '', imageUrl || null],
+      (err) => { if (err) console.error(err); }
     );
 
-    // Broadcast message to all connected clients
-    io.emit('chat-message', { username, message, imageUrl, created_at: new Date() });
-  });
-
-  // WebRTC Voice Channels & Screen Sharing Signaling
-  socket.on('join-voice-channel', (roomID) => {
-    socket.join(roomID);
-    const otherUsers = Array.from(io.sockets.adapter.rooms.get(roomID) || []).filter(id => id !== socket.id);
-    socket.emit('all-users', otherUsers);
-  });
-
-  socket.on('sending-signal', payload => {
-    io.to(payload.userToSignal).emit('user-joined', {
-      signal: payload.signal,
-      callerID: payload.callerID
-    });
-  });
-
-  socket.on('returning-signal', payload => {
-    io.to(payload.callerID).emit('receiving-returned-signal', {
-      signal: payload.signal,
-      id: socket.id
-    });
-  });
-
-  socket.on('disconnect', () => {
-    console.log(`User disconnected: ${socket.id}`);
+    io.emit('chat-message', data);
   });
 });
 
-// Start Server
 server.listen(PORT, () => {
-  console.log(`Trojan Connect server running live on port ${PORT}`);
+  console.log(`Trojan Connect server running on port ${PORT}`);
 });

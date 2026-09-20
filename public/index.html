@@ -4,101 +4,171 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trojan Connect</title>
-    <!-- Tailwind CSS CDN for a clean modern design -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 h-screen flex flex-col">
+<body class="bg-black text-yellow-400 h-screen flex flex-col font-sans">
 
-    <!-- LOGIN MODAL -->
-    <div id="loginModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-        <div class="bg-slate-800 p-8 rounded-2xl shadow-xl w-96 border border-slate-700">
-            <h2 class="text-2xl font-bold mb-4 text-center text-blue-400">Trojan Connect</h2>
-            <p class="text-sm text-slate-400 mb-6 text-center">Enter your username to join the chat and voice channels.</p>
-            <input type="text" id="usernameInput" placeholder="Your username..." class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl mb-4 focus:outline-none focus:border-blue-500 text-slate-100" />
-            <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-500 font-semibold py-3 rounded-xl transition duration-200">Start Chatting</button>
+    <!-- LOGIN / REGISTER MODAL -->
+    <div id="authModal" class="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
+        <div class="bg-zinc-900 border border-yellow-500/40 p-8 rounded-2xl shadow-2xl w-96">
+            <h2 class="text-3xl font-extrabold mb-2 text-center text-yellow-400 tracking-wider">TROJAN CONNECT</h2>
+            <p class="text-xs text-zinc-400 mb-6 text-center">Secure Communication Portal</p>
+            
+            <input type="text" id="authUsername" placeholder="Username" class="w-full px-4 py-3 bg-black border border-zinc-700 rounded-xl mb-3 focus:outline-none focus:border-yellow-400 text-yellow-300 placeholder-zinc-600" />
+            <input type="password" id="authPassword" placeholder="Password" class="w-full px-4 py-3 bg-black border border-zinc-700 rounded-xl mb-6 focus:outline-none focus:border-yellow-400 text-yellow-300 placeholder-zinc-600" />
+            
+            <div class="flex space-x-3">
+                <button onclick="handleAuth('login')" class="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition duration-200">Log In</button>
+                <button onclick="handleAuth('register')" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-yellow-400 border border-yellow-500/30 font-bold py-3 rounded-xl transition duration-200">Sign Up</button>
+            </div>
+            <p id="authError" class="text-red-500 text-xs text-center mt-4 font-semibold"></p>
         </div>
     </div>
 
     <!-- MAIN APP CONTAINER -->
-    <div class="flex-1 flex flex-col max-w-4xl mx-auto w-full p-4 h-full">
+    <div class="flex-1 flex max-w-6xl mx-auto w-full p-4 h-full gap-4">
         
-        <!-- HEADER -->
-        <header class="flex justify-between items-center py-3 border-b border-slate-800 mb-4">
-            <div class="flex items-center space-x-3">
-                <h1 class="text-xl font-bold text-blue-400">Trojan Connect</h1>
-                <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full font-medium">● Live</span>
+        <!-- SIDEBAR: FRIENDS & DMs -->
+        <div class="w-64 bg-zinc-900 border border-yellow-500/20 rounded-2xl p-4 flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-zinc-800 mb-4">
+                <h1 class="font-bold text-yellow-400 tracking-wide">Trojan Connect</h1>
+                <span class="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full font-mono">● LIVE</span>
             </div>
-            <div class="flex items-center space-x-3">
-                <button id="voiceBtn" onclick="toggleVoiceChannel()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition duration-200 flex items-center space-x-2">
-                    <span>🎙️</span>
-                    <span id="voiceBtnText">Join Voice</span>
+            
+            <div class="mb-4">
+                <button onclick="switchChat('global')" id="btn-global" class="w-full text-left px-3 py-2.5 rounded-xl bg-yellow-500 text-black font-bold text-sm transition">
+                    🌐 Global Lobby
                 </button>
-                <span id="currentUserDisplay" class="text-sm text-slate-400 font-medium"></span>
             </div>
-        </header>
 
-        <!-- CHAT MESSAGES FEED -->
-        <div id="chatMessages" class="flex-1 overflow-y-auto space-y-4 pr-2 mb-4 scrollbar-thin">
-            <!-- Messages will load dynamically here -->
+            <h3 class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Direct Messages</h3>
+            <div id="usersList" class="flex-1 overflow-y-auto space-y-1.5 pr-1">
+                <!-- Users loaded dynamically -->
+            </div>
+
+            <div class="pt-4 border-t border-zinc-800 flex items-center justify-between">
+                <span id="currentDisplayUser" class="text-xs font-bold text-yellow-300 truncate"></span>
+                <button onclick="logout()" class="text-xs text-zinc-400 hover:text-red-400 font-semibold">Log Out</button>
+            </div>
         </div>
 
-        <!-- HIDDEN FILE INPUT FOR IMAGES -->
-        <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="uploadImage(this)" />
+        <!-- CHAT INTERFACE -->
+        <div class="flex-1 bg-zinc-900 border border-yellow-500/20 rounded-2xl flex flex-col p-4">
+            
+            <!-- CHAT HEADER -->
+            <div class="pb-3 border-b border-zinc-800 flex justify-between items-center mb-4">
+                <h2 id="activeChatTitle" class="font-bold text-lg text-yellow-400">🌐 Global Lobby</h2>
+                <button id="voiceBtn" onclick="toggleVoice()" class="bg-black border border-yellow-500/40 hover:bg-zinc-800 px-4 py-2 rounded-xl text-xs font-bold text-yellow-400 transition">
+                    🎙️ Join Voice
+                </button>
+            </div>
 
-        <!-- INPUT FORM BAR -->
-        <form id="chatForm" onsubmit="sendMessage(event)" class="flex items-center space-x-3 bg-slate-800 p-2 rounded-2xl border border-slate-700">
-            <!-- Image Upload Trigger Button -->
-            <button type="button" onclick="document.getElementById('imageInput').click()" class="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl transition duration-200 text-lg" title="Send Picture">
-                
-            </button>
-            <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" class="flex-1 bg-transparent px-2 py-2 focus:outline-none text-slate-100 placeholder-slate-500" />
-            <button type="submit" class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl font-semibold transition duration-200">
-                Send
-            </button>
-        </form>
+            <!-- MESSAGES FEED -->
+            <div id="chatMessages" class="flex-1 overflow-y-auto space-y-3 pr-2 mb-4">
+                <!-- Messages load here -->
+            </div>
+
+            <!-- HIDDEN FILE INPUT -->
+            <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="uploadImage(this)" />
+
+            <!-- MESSAGE INPUT FORM -->
+            <form id="chatForm" onsubmit="sendMessage(event)" class="flex items-center space-x-3 bg-black p-2 rounded-2xl border border-zinc-800">
+                <button type="button" onclick="document.getElementById('imageInput').click()" class="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-xl transition text-yellow-400" title="Send Picture">
+                    📷
+                </button>
+                <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" class="flex-1 bg-transparent px-2 py-2 focus:outline-none text-yellow-300 placeholder-zinc-600 text-sm" />
+                <button type="submit" class="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-6 py-3 rounded-xl text-sm transition">
+                    Send
+                </button>
+            </form>
+        </div>
     </div>
 
-    <!-- AUDIO CONTAINER FOR VOICE CHANNELS -->
-    <div id="audio-container" class="hidden"></div>
-
-    <!-- SOCKET.IO CLIENT SCRIPT -->
+    <!-- SOCKET.IO CLIENT -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let currentUsername = '';
+        let currentUser = localStorage.getItem('trojan_username') || '';
+        let currentRecipient = 'global';
 
-        // Check persistent login on load
         window.addEventListener('load', () => {
-            const savedUser = localStorage.getItem('trojan_username');
-            if (savedUser) {
-                currentUsername = savedUser;
-                document.getElementById('loginModal').style.display = 'none';
-                document.getElementById('currentUserDisplay').innerText = `👤 ${currentUsername}`;
+            if (currentUser) {
+                document.getElementById('authModal').style.display = 'none';
+                document.getElementById('currentDisplayUser').innerText = `👤 ${currentUser}`;
+                loadAppData();
             }
         });
 
-        function handleLogin() {
-            const input = document.getElementById('usernameInput').value.trim();
-            if (!input) return alert('Please enter a valid username');
-            currentUsername = input;
-            localStorage.setItem('trojan_username', currentUsername);
-            document.getElementById('loginModal').style.display = 'none';
-            document.getElementById('currentUserDisplay').innerText = `👤 ${currentUsername}`;
+        function handleAuth(type) {
+            const username = document.getElementById('authUsername').value.trim();
+            const password = document.getElementById('authPassword').value.trim();
+            if (!username || !password) {
+                document.getElementById('authError').innerText = 'Please enter both username and password.';
+                return;
+            }
+            socket.emit(type, { username, password });
         }
 
-        // Load chat history
-        socket.on('load-history', (messages) => {
+        socket.on('auth-success', (data) => {
+            currentUser = data.username;
+            localStorage.setItem('trojan_username', currentUser);
+            document.getElementById('authModal').style.display = 'none';
+            document.getElementById('currentDisplayUser').innerText = `👤 ${currentUser}`;
+            loadAppData();
+        });
+
+        socket.on('auth-error', (msg) => {
+            document.getElementById('authError').innerText = msg;
+        });
+
+        function logout() {
+            localStorage.removeItem('trojan_username');
+            location.reload();
+        }
+
+        function loadAppData() {
+            socket.emit('get-users');
+            socket.emit('load-history', { user: currentUser, recipient: currentRecipient });
+            setInterval(() => socket.emit('get-users'), 5000);
+        }
+
+        socket.on('users-list', (users) => {
+            const list = document.getElementById('usersList');
+            list.innerHTML = '';
+            users.forEach(u => {
+                if (u === currentUser) return;
+                const active = currentRecipient === u;
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition ${active ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40' : 'text-zinc-400 hover:bg-zinc-800 hover:text-yellow-300'}`;
+                btn.innerText = `💬 ${u}`;
+                btn.onclick = () => switchChat(u);
+                list.appendChild(btn);
+            });
+        });
+
+        function switchChat(recipient) {
+            currentRecipient = recipient;
+            document.getElementById('activeChatTitle').innerText = recipient === 'global' ? '🌐 Global Lobby' : `💬 DM with ${recipient}`;
+            
+            // Update UI buttons styling
+            document.getElementById('btn-global').className = `w-full text-left px-3 py-2.5 rounded-xl font-bold text-sm transition ${recipient === 'global' ? 'bg-yellow-500 text-black' : 'bg-zinc-800 text-yellow-400 hover:bg-zinc-700'}`;
+            
+            socket.emit('load-history', { user: currentUser, recipient: currentRecipient });
+        }
+
+        socket.on('history-loaded', (messages) => {
             const container = document.getElementById('chatMessages');
             container.innerHTML = '';
             messages.forEach(msg => appendMessage(msg));
         });
 
-        // Listen for incoming messages
         socket.on('chat-message', (data) => {
-            appendMessage(data);
+            // Only show message if it belongs to current active view
+            if (data.recipient === currentRecipient || (data.recipient === currentUser && data.sender === currentRecipient) || (data.recipient === 'global' && currentRecipient === 'global')) {
+                appendMessage(data);
+            }
         });
 
-        // Send text message
         function sendMessage(e) {
             e.preventDefault();
             const input = document.getElementById('messageInput');
@@ -106,14 +176,14 @@
             if (!message) return;
 
             socket.emit('chat-message', {
-                username: currentUsername,
+                sender: currentUser,
+                recipient: currentRecipient,
                 message: message,
                 imageUrl: null
             });
             input.value = '';
         }
 
-        // Upload picture (Auto-deletes after 2 hours on server)
         async function uploadImage(inputElement) {
             const file = inputElement.files[0];
             if (!file) return;
@@ -122,41 +192,36 @@
             formData.append('image', file);
 
             try {
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
-
+                const res = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await res.json();
                 if (data.url) {
                     socket.emit('chat-message', {
-                        username: currentUsername,
+                        sender: currentUser,
+                        recipient: currentRecipient,
                         message: '',
                         imageUrl: data.url
                     });
                 }
-            } catch (err) {
-                console.error('Image upload failed:', err);
-                alert('Failed to upload image.');
+            } catch (e) {
+                alert('Image upload failed.');
             }
-            inputElement.value = ''; // Reset input
+            inputElement.value = '';
         }
 
-        // Append message to chat view
         function appendMessage(data) {
             const container = document.getElementById('chatMessages');
-            const isMe = data.username === currentUsername;
-            
+            const isMe = data.sender === currentUser;
+
             const div = document.createElement('div');
             div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-1`;
 
-            let imageHtml = data.imageUrl ? `<img src="${data.imageUrl}" class="max-w-xs rounded-xl mt-2 border border-slate-700 shadow-md" />` : '';
-            let textHtml = data.message ? `<p class="bg-${isMe ? 'blue-600' : 'slate-800'} px-4 py-2.5 rounded-2xl max-w-md break-words text-slate-100">${escapeHtml(data.message)}</p>` : '';
+            let imgHtml = data.imageUrl ? `<img src="${data.imageUrl}" class="max-w-xs rounded-xl mt-2 border border-yellow-500/30 shadow-md" />` : '';
+            let textHtml = data.message ? `<p class="px-4 py-2.5 rounded-2xl max-w-md break-words text-sm ${isMe ? 'bg-yellow-500 text-black font-medium' : 'bg-zinc-800 text-yellow-300 border border-zinc-700'}">${escapeHtml(data.message)}</p>` : '';
 
             div.innerHTML = `
-                <span class="text-xs text-slate-400 px-1 font-medium">${escapeHtml(data.username)}</span>
+                <span class="text-[10px] text-zinc-500 px-1 font-mono">${escapeHtml(data.sender)}</span>
                 ${textHtml}
-                ${imageHtml}
+                ${imgHtml}
             `;
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
@@ -167,29 +232,19 @@
             return text.replace(/[&<>"']/g, m => map[m]);
         }
 
-        // WebRTC Voice Channels Hook
         let inVoice = false;
-        async function toggleVoiceChannel() {
-            const btnText = document.getElementById('voiceBtnText');
-            if (!inVoice) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    socket.emit('join-voice-channel', 'global-voice-room');
+        async function toggleVoice() {
+            try {
+                if (!inVoice) {
+                    await navigator.mediaDevices.getUserMedia({ audio: true });
                     inVoice = true;
-                    btnText.innerText = "Leave Voice";
-                    document.getElementById('voiceBtn').classList.add('bg-emerald-600', 'border-emerald-500');
-                    
-                    // Attach local audio stream preview if needed
-                    const audioEl = document.createElement('audio');
-                    audioEl.srcObject = stream;
-                    audioEl.muted = true; // Mute self to avoid echo
-                    audioEl.autoplay = true;
-                    document.getElementById('audio-container').appendChild(audioEl);
-                } catch (err) {
-                    alert('Microphone access denied or unavailable.');
+                    document.getElementById('voiceBtn').innerText = "Leave Voice 🎙️";
+                    document.getElementById('voiceBtn').className = "bg-yellow-500 text-black font-bold px-4 py-2 rounded-xl text-xs transition";
+                } else {
+                    location.reload();
                 }
-            } else {
-                location.reload(); // Simple refresh to disconnect voice streams
+            } catch (e) {
+                alert('Microphone access denied.');
             }
         }
     </script>
