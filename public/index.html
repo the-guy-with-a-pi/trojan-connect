@@ -3,416 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trojan Connect | TCP</title>
+    <title>Trojan Connect</title>
+    <!-- Tailwind CSS CDN for a clean modern design -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              trojan: {
-                black: '#0a0a0a',
-                dark: '#121212',
-                panel: '#1a1a1a',
-                hover: '#222222',
-                yellow: '#eab308',
-                accent: '#ca8a04'
-              }
-            }
-          }
-        }
-      }
-    </script>
 </head>
-<body class="bg-trojan-black text-gray-200 h-screen flex flex-col font-sans overflow-hidden">
+<body class="bg-slate-900 text-slate-100 h-screen flex flex-col">
 
-    <!-- AUTHENTICATION OVERLAY -->
-    <div id="auth-modal" class="fixed inset-0 bg-trojan-black z-50 flex items-center justify-center p-4">
-        <div class="bg-trojan-dark border border-trojan-yellow/30 p-8 rounded-lg shadow-2xl w-full max-w-md">
-            <div class="text-center mb-6">
-                <span class="bg-trojan-yellow text-trojan-black font-bold px-3 py-1 rounded text-xs uppercase tracking-wider">TCP</span>
-                <h1 class="text-2xl font-bold text-white mt-2">Trojan Connect</h1>
-                <p class="text-xs text-gray-400 mt-1">Trojan Communication Pipeline by Mr. Seal</p>
-            </div>
-            
-            <div id="auth-error" class="hidden mb-4 p-3 bg-red-900/50 border border-red-500 text-red-200 text-xs rounded"></div>
-
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Username</label>
-                    <input type="text" id="auth-username" class="w-full bg-trojan-black border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-trojan-yellow" placeholder="Enter username..." />
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Password</label>
-                    <input type="password" id="auth-password" class="w-full bg-trojan-black border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-trojan-yellow" placeholder="Enter password..." />
-                </div>
-                <div class="flex gap-2 pt-2">
-                    <button type="button" id="login-btn" class="flex-1 bg-trojan-yellow hover:bg-trojan-accent text-trojan-black font-bold py-2 rounded text-sm transition cursor-pointer">Log In</button>
-                    <button type="button" id="signup-btn" class="flex-1 bg-trojan-panel hover:bg-trojan-hover text-trojan-yellow border border-trojan-yellow/40 font-bold py-2 rounded text-sm transition cursor-pointer">Sign Up</button>
-                </div>
-            </div>
+    <!-- LOGIN MODAL -->
+    <div id="loginModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div class="bg-slate-800 p-8 rounded-2xl shadow-xl w-96 border border-slate-700">
+            <h2 class="text-2xl font-bold mb-4 text-center text-blue-400">Trojan Connect</h2>
+            <p class="text-sm text-slate-400 mb-6 text-center">Enter your username to join the chat and voice channels.</p>
+            <input type="text" id="usernameInput" placeholder="Your username..." class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl mb-4 focus:outline-none focus:border-blue-500 text-slate-100" />
+            <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-500 font-semibold py-3 rounded-xl transition duration-200">Start Chatting</button>
         </div>
     </div>
 
-    <!-- MAIN APP INTERFACE -->
-    <div id="app-container" class="hidden flex h-screen w-screen overflow-hidden">
-        <nav class="w-18 bg-trojan-black border-r border-trojan-yellow/10 flex flex-col items-center py-3 space-y-3">
-            <button id="nav-dms" title="Direct Messages" class="w-12 h-12 rounded-xl bg-trojan-panel hover:bg-trojan-yellow hover:text-trojan-black text-trojan-yellow flex items-center justify-center font-bold transition shadow cursor-pointer">TCP</button>
-            <div class="w-8 h-[2px] bg-trojan-yellow/20 rounded"></div>
-            <button class="server-btn w-12 h-12 rounded-3xl hover:rounded-xl bg-trojan-panel hover:bg-trojan-yellow hover:text-trojan-black text-white flex items-center justify-center font-bold text-sm transition-all shadow cursor-pointer" data-server="Alpha Server">Α</button>
-            <button class="server-btn w-12 h-12 rounded-3xl hover:rounded-xl bg-trojan-panel hover:bg-trojan-yellow hover:text-trojan-black text-white flex items-center justify-center font-bold text-sm transition-all shadow cursor-pointer" data-server="Beta Hub">Β</button>
-        </nav>
+    <!-- MAIN APP CONTAINER -->
+    <div class="flex-1 flex flex-col max-w-4xl mx-auto w-full p-4 h-full">
+        
+        <!-- HEADER -->
+        <header class="flex justify-between items-center py-3 border-b border-slate-800 mb-4">
+            <div class="flex items-center space-x-3">
+                <h1 class="text-xl font-bold text-blue-400">Trojan Connect</h1>
+                <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full font-medium">● Live</span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button id="voiceBtn" onclick="toggleVoiceChannel()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition duration-200 flex items-center space-x-2">
+                    <span>🎙️</span>
+                    <span id="voiceBtnText">Join Voice</span>
+                </button>
+                <span id="currentUserDisplay" class="text-sm text-slate-400 font-medium"></span>
+            </div>
+        </header>
 
-        <div class="w-60 bg-trojan-dark border-r border-trojan-yellow/10 flex flex-col">
-            <div id="panel-header" class="h-14 border-b border-trojan-yellow/10 px-4 flex items-center justify-between font-bold text-white text-sm shadow-sm">
-                <span>Direct Messages</span>
-                <button id="nav-friends-tab" class="text-xs bg-trojan-panel hover:bg-trojan-yellow hover:text-trojan-black text-trojan-yellow px-2 py-1 rounded border border-trojan-yellow/30 transition cursor-pointer">👥 Friends</button>
-            </div>
-            <div id="panel-content" class="flex-1 overflow-y-auto p-3 space-y-1"></div>
-            <div class="p-3 bg-trojan-black border-t border-trojan-yellow/10 flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                    <div class="w-3 h-3 rounded-full bg-trojan-yellow"></div>
-                    <span id="current-username-display" class="text-sm font-semibold text-white">User</span>
-                </div>
-                <button id="logout-btn" class="text-xs text-gray-400 hover:text-trojan-yellow transition cursor-pointer">Logout</button>
-            </div>
+        <!-- CHAT MESSAGES FEED -->
+        <div id="chatMessages" class="flex-1 overflow-y-auto space-y-4 pr-2 mb-4 scrollbar-thin">
+            <!-- Messages will load dynamically here -->
         </div>
 
-        <main class="flex-1 flex flex-col bg-trojan-black">
-            <header class="h-14 border-b border-trojan-yellow/10 px-6 flex items-center justify-between bg-trojan-dark/50">
-                <div id="chat-header-title" class="font-bold text-white text-sm flex items-center space-x-2"><span class="text-trojan-yellow">#</span> <span>general</span></div>
-            </header>
-            <div id="chat-messages" class="flex-1 p-6 overflow-y-auto space-y-4">
-                <div class="text-center text-xs text-gray-500 my-2">Secure Trojan Communication Pipeline session started.</div>
-            </div>
-            <div class="p-4 bg-trojan-dark border-t border-trojan-yellow/10">
-                <form id="chat-form" class="flex gap-2">
-                    <input type="text" id="message-input" placeholder="Message..." class="flex-1 bg-trojan-black border border-gray-700 rounded px-4 py-2.5 text-sm text-white focus:outline-none focus:border-trojan-yellow" required />
-                    <button type="submit" class="bg-trojan-yellow hover:bg-trojan-accent text-trojan-black font-bold px-6 py-2.5 rounded text-sm transition cursor-pointer">Send</button>
-                </form>
-            </div>
-        </main>
+        <!-- HIDDEN FILE INPUT FOR IMAGES -->
+        <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="uploadImage(this)" />
+
+        <!-- INPUT FORM BAR -->
+        <form id="chatForm" onsubmit="sendMessage(event)" class="flex items-center space-x-3 bg-slate-800 p-2 rounded-2xl border border-slate-700">
+            <!-- Image Upload Trigger Button -->
+            <button type="button" onclick="document.getElementById('imageInput').click()" class="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl transition duration-200 text-lg" title="Send Picture">
+                
+            </button>
+            <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" class="flex-1 bg-transparent px-2 py-2 focus:outline-none text-slate-100 placeholder-slate-500" />
+            <button type="submit" class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl font-semibold transition duration-200">
+                Send
+            </button>
+        </form>
     </div>
 
+    <!-- AUDIO CONTAINER FOR VOICE CHANNELS -->
+    <div id="audio-container" class="hidden"></div>
+
+    <!-- SOCKET.IO CLIENT SCRIPT -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
+        let currentUsername = '';
 
-        let currentUser = null;
-        let currentRoom = 'general';
-        let currentRecipient = null;
-        let isDM = false;
-        let userFriends = [];
-        let userRequests = [];
-        let unreadDMs = {}; // Tracks unread state per friend username
-
-        const authModal = document.getElementById('auth-modal');
-        const appContainer = document.getElementById('app-container');
-        const authError = document.getElementById('auth-error');
-
-        document.getElementById('login-btn').addEventListener('click', () => handleAuth('login'));
-        document.getElementById('signup-btn').addEventListener('click', () => handleAuth('signup'));
-
-        function handleAuth(action) {
-            const username = document.getElementById('auth-username').value.trim();
-            const password = document.getElementById('auth-password').value.trim();
-
-            if (!username || !password) {
-                authError.innerText = 'Please enter both username and password.';
-                authError.classList.remove('hidden');
-                return;
+        // Check persistent login on load
+        window.addEventListener('load', () => {
+            const savedUser = localStorage.getItem('trojan_username');
+            if (savedUser) {
+                currentUsername = savedUser;
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('currentUserDisplay').innerText = `👤 ${currentUsername}`;
             }
-
-            authError.classList.add('hidden');
-
-            socket.emit('auth_user', { username, password, type: action }, (response) => {
-                if (response && response.success) {
-                    currentUser = response.username;
-                    socket.emit('register_session', currentUser);
-                    document.getElementById('current-username-display').innerText = currentUser;
-                    authModal.classList.add('hidden');
-                    appContainer.classList.remove('hidden');
-                    refreshUserData(() => loadDMSidebar());
-                } else {
-                    authError.innerText = response ? response.message : 'Unknown error occurred.';
-                    authError.classList.remove('hidden');
-                }
-            });
-        }
-
-        function refreshUserData(callback) {
-            socket.emit('get_user_data', currentUser, (data) => {
-                userFriends = data.friends;
-                userRequests = data.requests;
-                if (callback) callback();
-            });
-        }
-
-        document.getElementById('nav-dms').addEventListener('click', () => {
-            refreshUserData(() => loadDMSidebar());
         });
 
-        document.getElementById('nav-friends-tab').addEventListener('click', () => {
-            refreshUserData(() => loadFriendsView());
+        function handleLogin() {
+            const input = document.getElementById('usernameInput').value.trim();
+            if (!input) return alert('Please enter a valid username');
+            currentUsername = input;
+            localStorage.setItem('trojan_username', currentUsername);
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('currentUserDisplay').innerText = `👤 ${currentUsername}`;
+        }
+
+        // Load chat history
+        socket.on('load-history', (messages) => {
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '';
+            messages.forEach(msg => appendMessage(msg));
         });
-        
-        document.querySelectorAll('.server-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const serverName = btn.getAttribute('data-server');
-                switchServer(serverName);
-            });
+
+        // Listen for incoming messages
+        socket.on('chat-message', (data) => {
+            appendMessage(data);
         });
 
-        document.getElementById('logout-btn').addEventListener('click', () => location.reload());
-
-        function loadDMSidebar() {
-            isDM = false;
-            currentRecipient = null;
-            const panelHeader = document.getElementById('panel-header');
-            panelHeader.innerHTML = `
-                <span>Direct Messages</span>
-                <button id="nav-friends-tab" class="text-xs bg-trojan-panel hover:bg-trojan-yellow hover:text-trojan-black text-trojan-yellow px-2 py-1 rounded border border-trojan-yellow/30 transition cursor-pointer">👥 Friends</button>
-            `;
-            document.getElementById('nav-friends-tab').addEventListener('click', () => refreshUserData(() => loadFriendsView()));
-
-            const panelContent = document.getElementById('panel-content');
-            let friendsHtml = userFriends.length === 0 
-                ? `<div class="text-xs text-gray-500 text-center py-4">No friends yet. Click '👥 Friends' above to search & add!</div>`
-                : userFriends.map(friend => {
-                    const hasUnread = unreadDMs[friend];
-                    return `
-                        <button id="dm-${friend}" class="w-full text-left px-3 py-2 rounded hover:bg-trojan-panel text-gray-300 hover:text-white transition flex items-center justify-between text-sm cursor-pointer">
-                            <span>💬 ${friend}</span>
-                            <span id="dot-${friend}" class="w-2 h-2 rounded-full bg-trojan-yellow ${hasUnread ? '' : 'hidden'}"></span>
-                        </button>
-                    `;
-                }).join('');
-
-            panelContent.innerHTML = `
-                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 py-1 mb-1">Conversations</div>
-                <div id="friends-list-container" class="space-y-1">${friendsHtml}</div>
-            `;
-
-            userFriends.forEach(friend => {
-                const btn = document.getElementById(`dm-${friend}`);
-                if (btn) {
-                    btn.addEventListener('click', () => openDM(friend));
-                }
-            });
-
-            if (userFriends.length > 0) {
-                openDM(userFriends[0]);
-            } else {
-                document.getElementById('chat-header-title').innerHTML = `<span class="text-trojan-yellow">#</span> <span>Direct Messages</span>`;
-                document.getElementById('chat-messages').innerHTML = `<div class="text-center text-xs text-gray-500 my-2">Select a friend or add new friends to start messaging.</div>`;
-            }
-        }
-
-        function loadFriendsView() {
-            isDM = false;
-            currentRecipient = null;
-            const panelHeader = document.getElementById('panel-header');
-            panelHeader.innerHTML = `
-                <span>Direct Messages</span>
-                <button id="nav-friends-tab" class="text-xs bg-trojan-yellow text-trojan-black px-2 py-1 rounded font-bold transition cursor-pointer">👥 Friends</button>
-            `;
-            document.getElementById('nav-friends-tab').addEventListener('click', () => refreshUserData(() => loadDMSidebar()));
-
-            const panelContent = document.getElementById('panel-content');
-            
-            let requestsHtml = '';
-            if (userRequests.length > 0) {
-                requestsHtml = `<div class="mb-3 p-2 bg-trojan-panel rounded border border-trojan-yellow/20">
-                    <div class="text-xs font-semibold text-trojan-yellow mb-1">Incoming Requests</div>
-                    ${userRequests.map(req => `
-                        <div class="flex items-center justify-between text-xs py-1">
-                            <span class="text-white">${req}</span>
-                            <button onclick="acceptRequest('${req}')" class="bg-trojan-yellow text-trojan-black font-bold px-2 py-0.5 rounded cursor-pointer hover:bg-trojan-accent">Accept</button>
-                        </div>
-                    `).join('')}
-                </div>`;
-            }
-
-            panelContent.innerHTML = `
-                ${requestsHtml}
-                <div class="mb-3">
-                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Add Friend</label>
-                    <input type="text" id="search-user-input" placeholder="Search username..." class="w-full bg-trojan-black border border-gray-700 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-trojan-yellow" />
-                    <div id="search-results" class="mt-1 space-y-1"></div>
-                </div>
-                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 py-1">Your Friends (${userFriends.length})</div>
-                <div class="space-y-1">
-                    ${userFriends.length === 0 ? '<div class="text-xs text-gray-500 px-2">No friends added yet.</div>' : userFriends.map(f => `<div class="px-3 py-1.5 text-sm text-gray-300 bg-trojan-panel rounded">💬 ${f}</div>`).join('')}
-                </div>
-            `;
-
-            const searchInput = document.getElementById('search-user-input');
-            searchInput.addEventListener('input', (e) => {
-                const query = e.target.value.trim();
-                const resultsContainer = document.getElementById('search-results');
-                if (!query) {
-                    resultsContainer.innerHTML = '';
-                    return;
-                }
-                socket.emit('search_users', { query, currentUser }, (matches) => {
-                    resultsContainer.innerHTML = matches.map(match => `
-                        <div class="flex items-center justify-between bg-trojan-black px-2 py-1.5 rounded text-xs border border-gray-800">
-                            <span class="text-white">${match}</span>
-                            <button onclick="sendRequest('${match}')" class="text-trojan-yellow hover:underline cursor-pointer font-semibold">+ Add</button>
-                        </div>
-                    `).join('');
-                });
-            });
-
-            document.getElementById('chat-header-title').innerHTML = `<span>👥 Friends & Requests Management</span>`;
-            document.getElementById('chat-messages').innerHTML = `<div class="text-center text-xs text-gray-500 my-2">Search for users by username to send friend requests.</div>`;
-        }
-
-        window.sendRequest = function(targetUser) {
-            socket.emit('send_friend_request', { from: currentUser, to: targetUser }, (res) => {
-                alert(res.message);
-                document.getElementById('search-user-input').value =- '';
-                document.getElementById('search-results').innerHTML = '';
-            });
-        };
-
-        window.acceptRequest = function(requester) {
-            socket.emit('accept_friend_request', { currentUser, requester }, (res) => {
-                if (res.success) {
-                    refreshUserData(() => loadFriendsView());
-                }
-            });
-        };
-
-        function openDM(friend) {
-            isDM = true;
-            currentRecipient = friend;
-            currentRoom = [currentUser, friend].sort().join('_');
-            
-            // Clear unread status and hide yellow dot when opening the chat
-            unreadDMs[friend] = false;
-            const dot = document.getElementById(`dot-${friend}`);
-            if (dot) dot.classList.add('hidden');
-
-            socket.emit('join_room', currentRoom, (history) => {
-                renderMessages(history);
-            });
-
-            document.getElementById('chat-header-title').innerHTML = `<span>💬 DM with ${friend}</span>`;
-        }
-
-        function switchServer(serverName) {
-            isDM = false;
-            currentRecipient = null;
-            const panelContent = document.getElementById('panel-content');
-            const panelHeader = document.getElementById('panel-header');
-            
-            panelHeader.innerHTML = `
-                <span>${serverName}</span>
-                <button id="nav-friends-tab" class="text-xs bg-trojan-panel hover:bg-trojan-yellow hover:text-trojan-black text-trojan-yellow px-2 py-1 rounded border border-trojan-yellow/30 transition cursor-pointer">👥 Friends</button>
-            `;
-            document.getElementById('nav-friends-tab').addEventListener('click', () => refreshUserData(() => loadFriendsView()));
-
-            panelContent.innerHTML = `
-                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 py-1">Text Channels</div>
-                <button id="chan-general" class="w-full text-left px-3 py-2 rounded bg-trojan-yellow/10 text-trojan-yellow font-medium hover:bg-trojan-yellow/25 transition text-sm cursor-pointer"># general</button>
-                <button id="chan-lounge" class="w-full text-left px-3 py-2 rounded hover:bg-trojan-panel text-gray-400 hover:text-white transition text-sm cursor-pointer"># lounge</button>
-            `;
-            document.getElementById('chan-general').addEventListener('click', () => switchChannel(`${serverName}_general`, `# general`));
-            document.getElementById('chan-lounge').addEventListener('click', () => switchChannel(`${serverName}_lounge`, `# lounge`));
-            switchChannel(`${serverName}_general`, `# general`);
-        }
-
-        function switchChannel(room, displayTitle) {
-            currentRoom = room;
-            socket.emit('join_room', room, (history) => {
-                renderMessages(history);
-            });
-            document.getElementById('chat-header-title').innerHTML = `<span>${displayTitle || room}</span>`;
-        }
-
-        function renderMessages(history) {
-            const messagesDiv = document.getElementById('chat-messages');
-            if (!history || history.length === 0) {
-                messagesDiv.innerHTML = `<div class="text-center text-xs text-gray-500 my-2">No messages yet. Start the conversation!</div>`;
-                return;
-            }
-            messagesDiv.innerHTML = history.map(data => `
-                <div class="flex flex-col">
-                    <div class="flex items-baseline space-x-2">
-                        <span class="font-bold text-trojan-yellow text-sm">${data.username}</span>
-                        <span class="text-xs text-gray-500">${data.timestamp}</span>
-                    </div>
-                    <p class="text-gray-300 text-sm mt-0.5">${data.message}</p>
-                </div>
-            `).join('');
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        const chatForm = document.getElementById('chat-form');
-        const messageInput = document.getElementById('message-input');
-        const messagesDiv = document.getElementById('chat-messages');
-
-        chatForm.addEventListener('submit', (e) => {
+        // Send text message
+        function sendMessage(e) {
             e.preventDefault();
-            const message = messageInput.value.trim();
-            if (!message || !currentUser) return;
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message) return;
 
-            socket.emit('send_message', { 
-                room: currentRoom, 
-                username: currentUser, 
-                message, 
-                isDM, 
-                recipient: currentRecipient 
+            socket.emit('chat-message', {
+                username: currentUsername,
+                message: message,
+                imageUrl: null
             });
-            messageInput.value = '';
-        });
+            input.value = '';
+        }
 
-        socket.on('receive_message', (data) => {
-            if (data.isDM) {
-                // Determine who sent this DM
-                const sender = data.username === currentUser ? data.recipient : data.username;
-                
-                // If we are not currently inside this exact DM conversation window
-                if (!isDM || currentRecipient !== sender) {
-                    // Only flag as unread if the message came from the other person
-                    if (data.username !== currentUser) {
-                        unreadDMs[data.username] = true;
-                        const dot = document.getElementById(`dot-${data.username}`);
-                        if (dot) dot.classList.remove('hidden');
-                    }
-                    return;
+        // Upload picture (Auto-deletes after 2 hours on server)
+        async function uploadImage(inputElement) {
+            const file = inputElement.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.url) {
+                    socket.emit('chat-message', {
+                        username: currentUsername,
+                        message: '',
+                        imageUrl: data.url
+                    });
+                }
+            } catch (err) {
+                console.error('Image upload failed:', err);
+                alert('Failed to upload image.');
+            }
+            inputElement.value = ''; // Reset input
+        }
+
+        // Append message to chat view
+        function appendMessage(data) {
+            const container = document.getElementById('chatMessages');
+            const isMe = data.username === currentUsername;
+            
+            const div = document.createElement('div');
+            div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-1`;
+
+            let imageHtml = data.imageUrl ? `<img src="${data.imageUrl}" class="max-w-xs rounded-xl mt-2 border border-slate-700 shadow-md" />` : '';
+            let textHtml = data.message ? `<p class="bg-${isMe ? 'blue-600' : 'slate-800'} px-4 py-2.5 rounded-2xl max-w-md break-words text-slate-100">${escapeHtml(data.message)}</p>` : '';
+
+            div.innerHTML = `
+                <span class="text-xs text-slate-400 px-1 font-medium">${escapeHtml(data.username)}</span>
+                ${textHtml}
+                ${imageHtml}
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // WebRTC Voice Channels Hook
+        let inVoice = false;
+        async function toggleVoiceChannel() {
+            const btnText = document.getElementById('voiceBtnText');
+            if (!inVoice) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    socket.emit('join-voice-channel', 'global-voice-room');
+                    inVoice = true;
+                    btnText.innerText = "Leave Voice";
+                    document.getElementById('voiceBtn').classList.add('bg-emerald-600', 'border-emerald-500');
+                    
+                    // Attach local audio stream preview if needed
+                    const audioEl = document.createElement('audio');
+                    audioEl.srcObject = stream;
+                    audioEl.muted = true; // Mute self to avoid echo
+                    audioEl.autoplay = true;
+                    document.getElementById('audio-container').appendChild(audioEl);
+                } catch (err) {
+                    alert('Microphone access denied or unavailable.');
                 }
             } else {
-                if (isDM || data.room !== currentRoom) {
-                    return;
-                }
+                location.reload(); // Simple refresh to disconnect voice streams
             }
-
-            if (messagesDiv.querySelector('.text-center')) {
-                messagesDiv.innerHTML = '';
-            }
-
-            const div = document.createElement('div');
-            div.className = "flex flex-col";
-            div.innerHTML = `
-                <div class="flex items-baseline space-x-2">
-                    <span class="font-bold text-trojan-yellow text-sm">${data.username}</span>
-                    <span class="text-xs text-gray-500">${data.timestamp}</span>
-                </div>
-                <p class="text-gray-300 text-sm mt-0.5">${data.message}</p>
-            `;
-            messagesDiv.appendChild(div);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        });
-
-        socket.on('friend_request_received', (data) => {
-            refreshUserData(() => {
-                if (document.getElementById('search-user-input')) {
-                    loadFriendsView();
-                }
-            });
-        });
+        }
     </script>
 </body>
 </html>
