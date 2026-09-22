@@ -175,10 +175,10 @@ io.on('connection', (socket) => {
     try {
       let query, params;
       if (recipient === 'global') {
-        query = 'SELECT sender, recipient, message, image_url, created_at FROM messages WHERE recipient = $1 ORDER BY created_at ASC LIMIT 100';
+        query = 'SELECT sender, recipient, message, image_url AS "imageUrl", created_at AS "createdAt" FROM messages WHERE recipient = $1 ORDER BY created_at ASC LIMIT 100';
         params = ['global'];
       } else {
-        query = 'SELECT sender, recipient, message, image_url, created_at FROM messages WHERE (sender = $1 AND recipient = $2) OR (sender = $2 AND recipient = $1) ORDER BY created_at ASC LIMIT 100';
+        query = 'SELECT sender, recipient, message, image_url AS "imageUrl", created_at AS "createdAt" FROM messages WHERE (sender = $1 AND recipient = $2) OR (sender = $2 AND recipient = $1) ORDER BY created_at ASC LIMIT 100';
         params = [currentUser, recipient];
       }
       const res = await pool.query(query, params);
@@ -187,14 +187,17 @@ io.on('connection', (socket) => {
   });
 
   // Chat Messages
-  socket.on('chat-message', (data) => {
+  socket.on('chat-message', async (data) => {
     const { sender, recipient, message, imageUrl } = data;
-    pool.query(
-      'INSERT INTO messages (sender, recipient, message, image_url) VALUES ($1, $2, $3, $4)',
-      [sender, recipient || 'global', message || '', imageUrl || null],
-      (err) => { if (err) console.error(err); }
-    );
-    io.emit('chat-message', data);
+    try {
+      const result = await pool.query(
+        'INSERT INTO messages (sender, recipient, message, image_url) VALUES ($1, $2, $3, $4) RETURNING sender, recipient, message, image_url AS "imageUrl", created_at AS "createdAt"',
+        [sender, recipient || 'global', message || '', imageUrl || null]
+      );
+      io.emit('chat-message', result.rows[0]);
+    } catch (err) {
+      console.error('Error saving chat message:', err);
+    }
   });
 });
 

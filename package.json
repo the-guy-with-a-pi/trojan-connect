@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "express": "^4.19.2",
+    "multer": "^2.0.2",
     "pg": "^8.11.3",
     "socket.io": "^4.7.5"
   }

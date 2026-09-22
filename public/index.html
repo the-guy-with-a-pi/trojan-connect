@@ -344,11 +344,16 @@
             const div = document.createElement('div');
             div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-1`;
 
-            let imgHtml = data.imageUrl ? `<img src="${data.imageUrl}" class="max-w-xs rounded-xl mt-2 border border-yellow-500/30 shadow-md" />` : '';
+            const timestamp = data.createdAt || data.created_at;
+            const formattedTime = timestamp ? new Date(timestamp).toLocaleString([], {
+                dateStyle: 'medium',
+                timeStyle: 'short'
+            }) : '';
+            let imgHtml = data.imageUrl ? `<img src="${escapeHtml(data.imageUrl)}" alt="Shared image" class="max-w-xs rounded-xl mt-2 border border-yellow-500/30 shadow-md" />` : '';
             let textHtml = data.message ? `<p class="px-4 py-2.5 rounded-2xl max-w-md break-words text-sm ${isMe ? 'bg-yellow-500 text-black font-semibold' : 'bg-zinc-900 text-yellow-300 border border-zinc-800'}">${escapeHtml(data.message)}</p>` : '';
 
             div.innerHTML = `
-                <span class="text-[10px] text-zinc-500 px-1 font-mono font-bold">${escapeHtml(data.sender)}</span>
+                <span class="text-[10px] text-zinc-500 px-1 font-mono font-bold">${escapeHtml(data.sender)}${formattedTime ? ` <time datetime="${escapeHtml(timestamp)}">${escapeHtml(formattedTime)}</time>` : ''}</span>
                 ${textHtml}
                 ${imgHtml}
             `;
