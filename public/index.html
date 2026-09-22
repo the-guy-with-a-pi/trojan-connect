@@ -286,10 +286,11 @@
         }
 
         // Messages Handling
-        socket.on('history-loaded', (messages) => {
+        socket.on('history-loaded', (data) => {
+            if (data.recipient !== currentRecipient) return;
             const container = document.getElementById('chatMessages');
             container.innerHTML = '';
-            messages.forEach(msg => appendMessage(msg));
+            data.messages.forEach(msg => appendMessage(msg));
         });
 
         socket.on('chat-message', (data) => {
@@ -349,7 +350,8 @@
                 dateStyle: 'medium',
                 timeStyle: 'short'
             }) : '';
-            let imgHtml = data.imageUrl ? `<img src="${escapeHtml(data.imageUrl)}" alt="Shared image" class="max-w-xs rounded-xl mt-2 border border-yellow-500/30 shadow-md" />` : '';
+            const imageUrl = data.imageUrl || data.image_url;
+            let imgHtml = imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="Shared image" class="max-w-xs rounded-xl mt-2 border border-yellow-500/30 shadow-md" />` : '';
             let textHtml = data.message ? `<p class="px-4 py-2.5 rounded-2xl max-w-md break-words text-sm ${isMe ? 'bg-yellow-500 text-black font-semibold' : 'bg-zinc-900 text-yellow-300 border border-zinc-800'}">${escapeHtml(data.message)}</p>` : '';
 
             div.innerHTML = `

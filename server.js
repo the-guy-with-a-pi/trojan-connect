@@ -182,7 +182,7 @@ io.on('connection', (socket) => {
         params = [currentUser, recipient];
       }
       const res = await pool.query(query, params);
-      socket.emit('history-loaded', res.rows);
+      socket.emit('history-loaded', { recipient, messages: res.rows });
     } catch (e) {}
   });
 
