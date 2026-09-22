@@ -287,17 +287,25 @@
 
         // Messages Handling
         socket.on('history-loaded', (data) => {
-            if (data.recipient !== currentRecipient) return;
+            const messages = Array.isArray(data) ? data : data.messages;
+            const recipient = Array.isArray(data) ? currentRecipient : data.recipient;
+            if (recipient !== currentRecipient || !Array.isArray(messages)) return;
             const container = document.getElementById('chatMessages');
             container.innerHTML = '';
-            data.messages.forEach(msg => appendMessage(msg));
+            messages.forEach(msg => appendMessage(msg));
         });
 
         socket.on('chat-message', (data) => {
-            if (data.recipient === currentRecipient || (data.recipient === currentUser && data.sender === currentRecipient) || (data.recipient === 'global' && currentRecipient === 'global')) {
+            if (isCurrentConversation(data)) {
                 appendMessage(data);
             }
         });
+
+        function isCurrentConversation(data) {
+            if (currentRecipient === 'global') return data.recipient === 'global';
+            return (data.sender === currentUser && data.recipient === currentRecipient) ||
+                (data.sender === currentRecipient && data.recipient === currentUser);
+        }
 
         function sendMessage(e) {
             e.preventDefault();
